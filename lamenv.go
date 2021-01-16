@@ -8,7 +8,7 @@ import (
 )
 
 func Unmarshal(object interface{}, parts []string) error {
-	return New().decode(reflect.ValueOf(object), parts)
+	return New().Unmarshall(object, parts)
 }
 
 type Lamenv struct {
@@ -23,6 +23,10 @@ func New() *Lamenv {
 			"yaml", "json", "mapstructure",
 		},
 	}
+}
+
+func (l *Lamenv) Unmarshall(object interface{}, parts []string) error {
+	return l.decode(reflect.ValueOf(object), parts)
 }
 
 func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
