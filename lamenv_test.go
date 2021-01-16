@@ -167,6 +167,86 @@ func TestUnmarshallEnv(t *testing.T) {
 				Title: "my title",
 			},
 		},
+		{
+			title: "inner struct",
+			config: &struct {
+				Aptr *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"a_ptr"`
+				A struct {
+					A struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}
+				}
+			}{},
+			parts: []string{"PREFIX"},
+			env: map[string]string{
+				"PREFIX_A_PTR_INNER_NODE":       "1",
+				"PREFIX_A_A_A_SUPER_INNER_NODE": "2",
+			},
+			result: &struct {
+				Aptr *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"a_ptr"`
+				A struct {
+					A struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}
+				}
+			}{
+				Aptr: &struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					InnerNode: 1,
+				},
+				A: struct {
+					A struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}
+				}{
+					A: struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}{
+						A: struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}{
+							SuperInnerNode: 2,
+						},
+					},
+				},
+			},
+		},
+		{
+			title: "omitempty management for pointer",
+			config: &struct {
+				Ptr1 *struct {
+					InnerNode int
+				} `mapstructure:"ptr1,omitempty"` // the outcome is that the pointer shouldn't be initialized if the env doesn't exist
+				Ptr2 *struct {
+					InnerNode int
+				} `mapstructure:"ptr2"` // here the pointer should be created even if the env doesn't exist
+			}{},
+			result: &struct {
+				Ptr1 *struct {
+					InnerNode int
+				} `mapstructure:"ptr1,omitempty"`
+				Ptr2 *struct {
+					InnerNode int
+				} `mapstructure:"ptr2"`
+			}{
+				Ptr2: &struct {
+					InnerNode int
+				}{},
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
