@@ -116,6 +116,57 @@ func TestUnmarshallEnv(t *testing.T) {
 				Title: "my title",
 			},
 		},
+		{
+			title: "same simple config with multiple tag support",
+			config: &struct {
+				A     int   `yaml:"a"`
+				A1    int8  `json:"a_1"`
+				A2    int16 `mapstructure:"a_2"`
+				A3    int32 `yaml:"a_3"`
+				B     uint
+				B1    uint
+				B2    uint
+				B3    uint
+				C     bool
+				Title string
+			}{},
+			parts: []string{"PREFIX"},
+			env: map[string]string{
+				"PREFIX_A":     "78945613",
+				"PREFIX_A_1":   "-1",
+				"PREFIX_A_2":   "-123",
+				"PREFIX_A_3":   "456789",
+				"PREFIX_B":     "78945613",
+				"PREFIX_B1":    "1",
+				"PREFIX_B2":    "123",
+				"PREFIX_B3":    "456789",
+				"PREFIX_C":     "true",
+				"PREFIX_TITLE": "my title",
+			},
+			result: &struct {
+				A     int   `yaml:"a"`
+				A1    int8  `json:"a_1"`
+				A2    int16 `mapstructure:"a_2"`
+				A3    int32 `yaml:"a_3"`
+				B     uint
+				B1    uint
+				B2    uint
+				B3    uint
+				C     bool
+				Title string
+			}{
+				A:     78945613,
+				A1:    -1,
+				A2:    -123,
+				A3:    456789,
+				B:     78945613,
+				B1:    1,
+				B2:    123,
+				B3:    456789,
+				C:     true,
+				Title: "my title",
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
