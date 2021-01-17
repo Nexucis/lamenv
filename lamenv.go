@@ -1,6 +1,7 @@
 package lamenv
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -41,6 +42,10 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 	}
 
 	switch v.Kind() {
+	case reflect.Map:
+		if err := l.decodeMap(v, parts); err != nil {
+			return err
+		}
 	case reflect.Slice:
 		if err := l.decodeSlice(v, parts); err != nil {
 			return err
@@ -140,7 +145,7 @@ func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 	if isNative(sliceType) && exists(parts) {
 		e, _ := lookupEnv(parts)
 		for _, s := range strings.Split(e, ",") {
-			tmp := reflect.New(sliceType).Elem()
+			tmp := reflect.Indirect(reflect.New(sliceType))
 			if err := l.decodeNative(tmp, s); err != nil {
 				return err
 			}
@@ -152,7 +157,7 @@ func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 		i := 0
 		for ok := contains(append(parts, strconv.Itoa(i))); ok; ok = contains(append(parts, strconv.Itoa(i))) {
 			// create a new item and pass it to the method decode to be able to "decode" its value
-			tmp := reflect.New(sliceType).Elem()
+			tmp := reflect.Indirect(reflect.New(sliceType))
 			if err := l.decode(tmp, append(parts, strconv.Itoa(i))); err != nil {
 				return err
 			}
@@ -177,8 +182,12 @@ func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 				continue
 			}
 			if strings.Contains(attrName, "omitempty") {
-				// it means there is no variables
-				// related to the current field, so we can ignore it
+				// Here we only have to check if there is one environment variable that is starting by the current parts
+				// It's not necessary accurate if you have one field that is a prefix of another field.
+				// But it's not really a big deal since it will just loop another time for nothing and could eventually initialize the field. But this case will not occur so often.
+				// To be more accurate, we would have to check the type of the field, because if it's a native type, then we will have to check if the parts are matching an environment variable.
+				// If it's a struct or an array or a map, then we will have to check if there is at least one variable starting by the parts + "_" (which would remove the possibility of having a field being a prefix of another one)
+				// So it's simpler like that. Let's see if I'm wrong or not.
 				if !contains(append(parts, attrName)) {
 					continue
 				}
@@ -190,6 +199,45 @@ func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
+	keyType := v.Type().Key()
+	valueType := v.Type().Elem()
+	if keyType.Kind() != reflect.String {
+		return fmt.Errorf("unable to unmarshal a map with a key that is not a string")
+	}
+	valMap := v
+	if v.IsNil() {
+		mapType := reflect.MapOf(keyType, valueType)
+		valMap = reflect.MakeMap(mapType)
+	}
+	if isNative(valueType) {
+		variable := buildEnvVariable(parts)
+		variable = variable + "_"
+		for _, e := range os.Environ() {
+			envSplit := strings.Split(e, "=")
+			if len(envSplit) != 2 {
+				continue
+			}
+			if strings.Contains(envSplit[0], variable) {
+				result := strings.SplitN(envSplit[0], variable, 2)
+				if len(result) != 2 {
+					continue
+				}
+				value := reflect.Indirect(reflect.New(valueType))
+				if err := l.decodeNative(value, envSplit[1]); err != nil {
+					return err
+				}
+				key := reflect.Indirect(reflect.New(reflect.TypeOf("")))
+				key.SetString(strings.TrimSpace(strings.ToLower(result[1])))
+				valMap.SetMapIndex(key, value)
+			}
+		}
+	}
+	// Set the built up map to the value
+	v.Set(valMap)
 	return nil
 }
 

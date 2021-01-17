@@ -304,6 +304,56 @@ func TestUnmarshallEnv(t *testing.T) {
 				},
 			},
 		},
+		{
+			title: "slice of pointer to struct",
+			config: &struct {
+				Slice []*struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+			}{},
+			env: map[string]string{
+				"SLICE_0_INNER_NODE": "5",
+				"SLICE_1_INNER_NODE": "1",
+			},
+			result: &struct {
+				Slice []*struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+			}{
+				Slice: []*struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					{
+						InnerNode: 5,
+					},
+					{
+						InnerNode: 1,
+					},
+				},
+			},
+		},
+		{
+			title: "map of native type",
+			config: &struct {
+				Map  map[string]int
+				Map2 map[string]float64
+			}{},
+			env: map[string]string{
+				"MAP_LOL":        "5",
+				"MAP2_SUPER_FUN": "1",
+			},
+			result: &struct {
+				Map  map[string]int
+				Map2 map[string]float64
+			}{
+				Map: map[string]int{
+					"lol": 5,
+				},
+				Map2: map[string]float64{
+					"super_fun": 1,
+				},
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
