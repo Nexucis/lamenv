@@ -34,7 +34,13 @@ func (r *ring) buildRing(t reflect.Type, tag []string) {
 		r.value = r.value + "_0"
 		r.buildRing(t.Elem(), tag)
 	case reflect.Struct:
+		// to avoid looking at the unexported type, we will create a value to then have access to the method reflect.CanSet()
+		v := reflect.Indirect(reflect.New(t))
 		for i := 0; i < t.NumField(); i++ {
+			if !v.Field(i).CanSet() {
+				// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
+				continue
+			}
 			attrField := t.Field(i)
 			attrName, ok := lookupTag(attrField.Tag, tag)
 			if ok {

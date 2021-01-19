@@ -61,12 +61,12 @@ func TestNew(t *testing.T) {
 		{
 			title: "struct with a single level",
 			config: struct {
-				title       string
-				field       int
-				myMap       map[string]string `mapstructure:"my_map"`
-				slice       []string
-				array       [1]int
-				myInterface interface{}
+				Title       string
+				Field       int
+				MyMap       map[string]string `mapstructure:"my_map"`
+				Slice       []string
+				Array       [1]int
+				MyInterface interface{}
 			}{},
 			result: &ring{
 				kind:  root,
@@ -74,12 +74,12 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:     leaf,
-						value:    "title",
+						value:    "Title",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "field",
+						value:    "Field",
 						children: nil,
 					},
 					{
@@ -89,17 +89,17 @@ func TestNew(t *testing.T) {
 					},
 					{
 						kind:     leaf,
-						value:    "slice_0",
+						value:    "Slice_0",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "array_0",
+						value:    "Array_0",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "myInterface",
+						value:    "MyInterface",
 						children: nil,
 					},
 				},
@@ -108,12 +108,12 @@ func TestNew(t *testing.T) {
 		{
 			title: "array of struct",
 			config: []struct {
-				title       string
-				field       int
-				myMap       map[string]string `mapstructure:"my_map"`
-				slice       []string
-				array       [1]int
-				myInterface interface{} `yaml:"my_interface"`
+				Title       string
+				Field       int
+				MyMap       map[string]string `mapstructure:"my_map"`
+				Slice       []string
+				Array       [1]int
+				MyInterface interface{} `yaml:"my_interface"`
 			}{},
 			result: &ring{
 				kind:  root,
@@ -121,12 +121,12 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:     leaf,
-						value:    "title",
+						value:    "Title",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "field",
+						value:    "Field",
 						children: nil,
 					},
 					{
@@ -136,12 +136,12 @@ func TestNew(t *testing.T) {
 					},
 					{
 						kind:     leaf,
-						value:    "slice_0",
+						value:    "Slice_0",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "array_0",
+						value:    "Array_0",
 						children: nil,
 					},
 					{
@@ -155,9 +155,9 @@ func TestNew(t *testing.T) {
 		{
 			title: "ignoring and squashing item in struct",
 			config: struct {
-				myInterface interface{} `json:"-" yaml:"-"`
-				title       string      `yaml:",inline"`
-				otherTitle  string      `mapstructure:",inline"`
+				MyInterface interface{} `json:"-" yaml:"-"`
+				Title       string      `yaml:",inline"`
+				OtherTitle  string      `mapstructure:",inline"`
 			}{},
 			result: &ring{
 				kind:  root,
@@ -177,24 +177,42 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
+			title: "ignoring unexported field",
+			config: struct {
+				unexportedFieldTitle string
+				ExportedField        uint64
+			}{},
+			result: &ring{
+				kind:  root,
+				value: "",
+				children: []*ring{
+					{
+						kind:     leaf,
+						value:    "ExportedField",
+						children: nil,
+					},
+				},
+			},
+		},
+		{
 			title: "complexe struct",
 			config: struct {
-				a struct {
-					b struct {
-						c struct {
-							slice []struct {
-								array [1]struct {
-									leaf map[string]struct{}
+				A struct {
+					B struct {
+						C struct {
+							Slice []struct {
+								Array [1]struct {
+									Leaf map[string]struct{}
 								}
 							}
 						}
 					}
 				}
-				a2 struct {
-					title string
+				A2 struct {
+					Title string
 				} `mapstructure:",squash"`
-				a3 []struct {
-					innerNode int `yaml:"inner_node"`
+				A3 []struct {
+					InnerNode int `yaml:"inner_node"`
 				} `mapstructure:",squash"`
 			}{},
 			result: &ring{
@@ -203,27 +221,27 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:  node,
-						value: "a",
+						value: "A",
 						children: []*ring{
 							{
 								kind:  node,
-								value: "b",
+								value: "B",
 								children: []*ring{
 									{
 										kind:  node,
-										value: "c",
+										value: "C",
 										children: []*ring{
 											{
 												kind:  node,
-												value: "slice_0",
+												value: "Slice_0",
 												children: []*ring{
 													{
 														kind:  node,
-														value: "array_0",
+														value: "Array_0",
 														children: []*ring{
 															{
 																kind:     leaf,
-																value:    "leaf",
+																value:    "Leaf",
 																children: nil,
 															},
 														},
@@ -242,7 +260,7 @@ func TestNew(t *testing.T) {
 						children: []*ring{
 							{
 								kind:     leaf,
-								value:    "title",
+								value:    "Title",
 								children: nil,
 							},
 						},
