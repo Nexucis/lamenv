@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+var defaultTagSupported = []string{
+	"yaml", "json", "mapstructure",
+}
+
 func Unmarshal(object interface{}, parts []string) error {
 	return New().Unmarshall(object, parts)
 }
@@ -16,13 +20,28 @@ type Lamenv struct {
 	// TagSupports is a list of tag like "yaml", "json"
 	// that the code will look at it to know the name of the field
 	TagSupports []string
+	// env is the map that is representing the list of the environment variable visited
+	// The key is the name of the variable.
+	// The value is not important, since once the variable would be used, then the key will be removed
+	// It will be useful when a map is involved in order to not parse every possible variable
+	// but only the one that are still not used.
+	env map[string]bool
 }
 
 func New() *Lamenv {
+	env := make(map[string]bool)
+	for _, e := range os.Environ() {
+		envSplit := strings.Split(e, "=")
+		if len(envSplit) != 2 {
+			continue
+		}
+		env[envSplit[0]] = true
+	}
 	return &Lamenv{
 		TagSupports: []string{
 			"yaml", "json", "mapstructure",
 		},
+		env: env,
 	}
 }
 
@@ -56,6 +75,8 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 		}
 	default:
 		if input, ok := lookupEnv(parts); ok {
+			// remove the variable to avoid to reuse it later
+			delete(l.env, input)
 			return l.decodeNative(v, input)
 		}
 	}
@@ -135,47 +156,40 @@ func (l *Lamenv) decodeFloat(v reflect.Value, input string) error {
 	return nil
 }
 
-// decodeSlice will support two different syntax for the slice of native type (and only one for the struct)
-// First one would be to have a single variable containing the whole slice. Each items are separated by a comma.
-// The second one would be:
-//                <PREFIX>_<SLICE_INDEX>(_<SUFFIX>)?
-// Note: the second syntax would be the only one supported for the slice of struct
+// decodeSlice will support ony one syntax which is:
+//        <PREFIX>_<SLICE_INDEX>(_<SUFFIX>)?
+// This syntax is the only one that is able to manage smoothly every existing type in Golang and it is a determinist syntax.
 func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 	sliceType := v.Type().Elem()
-	if isNative(sliceType) && exists(parts) {
-		e, _ := lookupEnv(parts)
-		for _, s := range strings.Split(e, ",") {
-			tmp := reflect.Indirect(reflect.New(sliceType))
-			if err := l.decodeNative(tmp, s); err != nil {
-				return err
-			}
-			v.Set(reflect.Append(v, tmp))
+	// While we are able to find an environment variable that is starting by <PREFIX>_<SLICE_INDEX>
+	// then it will create a new item in a slice and will use the next recursive loop to set it.
+	i := 0
+	for ok := contains(append(parts, strconv.Itoa(i))); ok; ok = contains(append(parts, strconv.Itoa(i))) {
+		// create a new item and pass it to the method decode to be able to "decode" its value
+		tmp := reflect.Indirect(reflect.New(sliceType))
+		if err := l.decode(tmp, append(parts, strconv.Itoa(i))); err != nil {
+			return err
 		}
-	} else {
-		// Second syntax. While we are able to find an environment variable that is starting by <PREFIX>_<SLICE_INDEX>
-		//  then it will create a new item in a slice and will use the next recursive loop to set it.
-		i := 0
-		for ok := contains(append(parts, strconv.Itoa(i))); ok; ok = contains(append(parts, strconv.Itoa(i))) {
-			// create a new item and pass it to the method decode to be able to "decode" its value
-			tmp := reflect.Indirect(reflect.New(sliceType))
-			if err := l.decode(tmp, append(parts, strconv.Itoa(i))); err != nil {
-				return err
-			}
-			v.Set(reflect.Append(v, tmp))
-			i++
-		}
+		v.Set(reflect.Append(v, tmp))
+		i++
 	}
-
 	return nil
 }
 
 func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 	for i := 0; i < v.NumField(); i++ {
 		attr := v.Field(i)
-		attrType := v.Type().Field(i)
-		attrName, ok := l.lookupTag(attrType.Tag)
+		if !attr.CanSet() {
+			// the field is not exported, so we won't be able to change its value.
+			continue
+		}
+		attrField := v.Type().Field(i)
+		attrName, ok := l.lookupTag(attrField.Tag)
 		if ok {
-			if attrName == ",squash" {
+			if attrName == "-" {
+				continue
+			}
+			if attrName == ",squash" || attrName == ",inline" {
 				if err := l.decode(attr, parts); err != nil {
 					return err
 				}
@@ -193,7 +207,7 @@ func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 				}
 			}
 		} else {
-			attrName = attrType.Name
+			attrName = attrField.Name
 		}
 		if err := l.decode(attr, append(parts, attrName)); err != nil {
 			return err
@@ -208,33 +222,45 @@ func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
 	if keyType.Kind() != reflect.String {
 		return fmt.Errorf("unable to unmarshal a map with a key that is not a string")
 	}
+	if valueType.Kind() == reflect.Map {
+		return fmt.Errorf("unable to unmarshal a map of a map, it's not a determinist datamodel")
+	}
 	valMap := v
 	if v.IsNil() {
 		mapType := reflect.MapOf(keyType, valueType)
 		valMap = reflect.MakeMap(mapType)
 	}
-	if isNative(valueType) {
+	// The main issue with the map when you are dealing with environment variable is to be able to find the key of the map
+	// A way to achieve it is to take a look at the type of the value of the map.
+	// It will be used to find every potential future parts, which will be then used as a variable suffix.
+	// Like that we are able catch the key that would be in the middle of the prefix parts and the future parts
+
+	// Let's create first the struct that would represent what is behind the value of the map
+	parser := newRing(valueType, l.TagSupports)
+
+	// then foreach environment variable:
+	// 1. Remove the prefix parts
+	// 2. Pass the remaining parts to the parser that would return the prefix to be used.
+	for e := range l.env {
 		variable := buildEnvVariable(parts)
-		variable = variable + "_"
-		for _, e := range os.Environ() {
-			envSplit := strings.Split(e, "=")
-			if len(envSplit) != 2 {
-				continue
-			}
-			if strings.Contains(envSplit[0], variable) {
-				result := strings.SplitN(envSplit[0], variable, 2)
-				if len(result) != 2 {
-					continue
-				}
-				value := reflect.Indirect(reflect.New(valueType))
-				if err := l.decodeNative(value, envSplit[1]); err != nil {
-					return err
-				}
-				key := reflect.Indirect(reflect.New(reflect.TypeOf("")))
-				key.SetString(strings.TrimSpace(strings.ToLower(result[1])))
-				valMap.SetMapIndex(key, value)
-			}
+		e := strings.TrimPrefix(e, variable)
+		if e == variable {
+			// TrimPrefix didn't remove anything, so that means, the environment variable doesn't start with the prefix parts
+			continue
 		}
+		futureParts := strings.Split(e, "_")
+		prefix, err := guessPrefix(futureParts, parser)
+		if err != nil {
+			return err
+		}
+		keyString := strings.ToLower(prefix)
+		value := reflect.Indirect(reflect.New(valueType))
+		if err := l.decode(value, append(parts, keyString)); err != nil {
+			return err
+		}
+		key := reflect.Indirect(reflect.New(reflect.TypeOf("")))
+		key.SetString(strings.TrimSpace(strings.ToLower(keyString)))
+		valMap.SetMapIndex(key, value)
 	}
 	// Set the built up map to the value
 	v.Set(valMap)
@@ -242,12 +268,36 @@ func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
 }
 
 func (l *Lamenv) lookupTag(tag reflect.StructTag) (string, bool) {
-	for _, tagSupport := range l.TagSupports {
-		if s, ok := tag.Lookup(tagSupport); ok {
-			return s, ok
+	return lookupTag(tag, l.TagSupports)
+}
+
+func (l *Lamenv) lookupFutureEnv(t reflect.Type) []string {
+	var result []string
+	switch t.Kind() {
+	case reflect.Ptr:
+		return l.lookupFutureEnv(t.Elem())
+	case reflect.Slice:
+		// As it has to start at 0, we just have to return the value 0.
+		return []string{"0"}
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			attrField := t.Field(i)
+			attrName, ok := l.lookupTag(attrField.Tag)
+			if ok {
+				if attrName == ",squash" || attrName == "-" {
+					result = append(result, l.lookupFutureEnv(attrField.Type)...)
+					continue
+				}
+			} else {
+				attrName = attrField.Name
+			}
+			result = append(result, attrName)
 		}
+		return result
+	default:
+		// for the native type it won't have any future additional env
+		return []string{""}
 	}
-	return "", false
 }
 
 func contains(parts []string) bool {
@@ -264,13 +314,17 @@ func contains(parts []string) bool {
 	return false
 }
 
-func exists(parts []string) bool {
-	_, ok := lookupEnv(parts)
-	return ok
-}
-
 func lookupEnv(parts []string) (string, bool) {
 	return os.LookupEnv(buildEnvVariable(parts))
+}
+
+func lookupTag(tag reflect.StructTag, tagSupports []string) (string, bool) {
+	for _, tagSupport := range tagSupports {
+		if s, ok := tag.Lookup(tagSupport); ok {
+			return s, ok
+		}
+	}
+	return "", false
 }
 
 func buildEnvVariable(parts []string) string {
@@ -279,12 +333,4 @@ func buildEnvVariable(parts []string) string {
 		newParts[i] = strings.ToUpper(s)
 	}
 	return strings.Join(newParts, "_")
-}
-
-func isNative(t reflect.Type) bool {
-	kind := t.Kind()
-	if kind == reflect.Ptr {
-		kind = t.Elem().Kind()
-	}
-	return kind != reflect.Slice && kind != reflect.Struct && kind != reflect.Map
 }

@@ -263,20 +263,6 @@ func TestUnmarshallEnv(t *testing.T) {
 			},
 		},
 		{
-			title: "slice with native type 2",
-			config: &struct {
-				Slice []int
-			}{},
-			env: map[string]string{
-				"SLICE": "3, 2",
-			},
-			result: &struct {
-				Slice []int
-			}{
-				Slice: []int{3, 2},
-			},
-		},
-		{
 			title: "slice of struct",
 			config: &struct {
 				Slice []struct {
@@ -351,6 +337,109 @@ func TestUnmarshallEnv(t *testing.T) {
 				},
 				Map2: map[string]float64{
 					"super_fun": 1,
+				},
+			},
+		},
+		{
+			title: "map of complex type",
+			config: &struct {
+				Map map[string]struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+				Map2 map[string][]int
+			}{},
+			env: map[string]string{
+				"MAP_LOL_INNER_NODE": "5",
+				"MAP_PGM_INNER_NODE": "6",
+				"MAP2_SUPER_FUN_0":   "1",
+				"MAP2_SUPER_FUN_1":   "2",
+				"MAP2_FUN_0":         "4",
+				"MAP2_FUN_1":         "5",
+			},
+			result: &struct {
+				Map map[string]struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+				Map2 map[string][]int
+			}{
+				Map: map[string]struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					"lol": {InnerNode: 5},
+					"pgm": {InnerNode: 6},
+				},
+				Map2: map[string][]int{
+					"super_fun": {1, 2},
+					"fun":       {4, 5},
+				},
+			},
+		},
+		{
+			title: "map of complex type",
+			config: &struct {
+				Map map[string]struct {
+					My struct {
+						Key       string
+						InnerNode []struct {
+							Map map[string]string
+						} `mapstructure:"inner_node"`
+					}
+				}
+			}{},
+			env: map[string]string{
+				"MAP_MY_KEY_MY_KEY":                     "lol",
+				"MAP_MY_MY_MY_KEY":                      "gg",
+				"MAP_MY_MY_INNER_NODE_0_MAP_INNER_NODE": "5",
+				"MAP_MY_MY_INNER_NODE_0_MAP_MY_KEY":     "6",
+				"MAP_MY_MY_MY_MY_KEY":                   "gg",
+			},
+			result: &struct {
+				Map map[string]struct {
+					My struct {
+						Key       string
+						InnerNode []struct {
+							Map map[string]string
+						} `mapstructure:"inner_node"`
+					}
+				}
+			}{
+				Map: map[string]struct {
+					My struct {
+						Key       string
+						InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+					}
+				}{
+					"my_key": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "lol",
+						},
+					},
+					"my_my": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "gg",
+							InnerNode: []struct{ Map map[string]string }{
+								{
+									Map: map[string]string{
+										"inner_node": "5",
+									},
+								},
+							},
+						},
+					},
+					"my_my_my": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "gg",
+						},
+					},
 				},
 			},
 		},
