@@ -275,35 +275,6 @@ func (l *Lamenv) lookupTag(tag reflect.StructTag) (string, bool) {
 	return lookupTag(tag, l.TagSupports)
 }
 
-func (l *Lamenv) lookupFutureEnv(t reflect.Type) []string {
-	var result []string
-	switch t.Kind() {
-	case reflect.Ptr:
-		return l.lookupFutureEnv(t.Elem())
-	case reflect.Slice:
-		// As it has to start at 0, we just have to return the value 0.
-		return []string{"0"}
-	case reflect.Struct:
-		for i := 0; i < t.NumField(); i++ {
-			attrField := t.Field(i)
-			attrName, ok := l.lookupTag(attrField.Tag)
-			if ok {
-				if attrName == ",squash" || attrName == "-" {
-					result = append(result, l.lookupFutureEnv(attrField.Type)...)
-					continue
-				}
-			} else {
-				attrName = attrField.Name
-			}
-			result = append(result, attrName)
-		}
-		return result
-	default:
-		// for the native type it won't have any future additional env
-		return []string{""}
-	}
-}
-
 func contains(parts []string) bool {
 	variable := buildEnvVariable(parts)
 	for _, e := range os.Environ() {
