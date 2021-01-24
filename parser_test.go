@@ -75,32 +75,32 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:     leaf,
-						value:    "Title",
+						value:    "TITLE",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Field",
+						value:    "FIELD",
 						children: nil,
 					},
 					{
 						kind:     deadLeaf,
-						value:    "my_map",
+						value:    "MY_MAP",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Slice_0",
+						value:    "SLICE_0",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Array_0",
+						value:    "ARRAY_0",
 						children: nil,
 					},
 					{
 						kind:     deadLeaf,
-						value:    "MyInterface",
+						value:    "MYINTERFACE",
 						children: nil,
 					},
 				},
@@ -122,32 +122,32 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:     leaf,
-						value:    "Title",
+						value:    "TITLE",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Field",
+						value:    "FIELD",
 						children: nil,
 					},
 					{
 						kind:     deadLeaf,
-						value:    "my_map",
+						value:    "MY_MAP",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Slice_0",
+						value:    "SLICE_0",
 						children: nil,
 					},
 					{
 						kind:     leaf,
-						value:    "Array_0",
+						value:    "ARRAY_0",
 						children: nil,
 					},
 					{
 						kind:     deadLeaf,
-						value:    "my_interface",
+						value:    "MY_INTERFACE",
 						children: nil,
 					},
 				},
@@ -189,7 +189,7 @@ func TestNew(t *testing.T) {
 				children: []*ring{
 					{
 						kind:     leaf,
-						value:    "ExportedField",
+						value:    "EXPORTEDFIELD",
 						children: nil,
 					},
 				},
@@ -234,15 +234,15 @@ func TestNew(t *testing.T) {
 										children: []*ring{
 											{
 												kind:  node,
-												value: "Slice_0",
+												value: "SLICE_0",
 												children: []*ring{
 													{
 														kind:  node,
-														value: "Array_0",
+														value: "ARRAY_0",
 														children: []*ring{
 															{
 																kind:     deadLeaf,
-																value:    "Leaf",
+																value:    "LEAF",
 																children: nil,
 															},
 														},
@@ -261,7 +261,7 @@ func TestNew(t *testing.T) {
 						children: []*ring{
 							{
 								kind:     leaf,
-								value:    "Title",
+								value:    "TITLE",
 								children: nil,
 							},
 						},
@@ -272,7 +272,7 @@ func TestNew(t *testing.T) {
 						children: []*ring{
 							{
 								kind:     leaf,
-								value:    "inner_node",
+								value:    "INNER_NODE",
 								children: nil,
 							},
 						},
@@ -472,17 +472,11 @@ func TestPossiblePrefix(t *testing.T) {
 		result []possiblePrefix
 	}{
 		{
-			title: "simple match",
-			part:  "a",
-			value: "a",
-			pos:   0,
-			result: []possiblePrefix{
-				{
-					value:    "",
-					startPos: 0,
-					endPos:   0,
-				},
-			},
+			title:  "simple match",
+			part:   "a",
+			value:  "a",
+			pos:    0,
+			result: nil,
 		},
 		{
 			title:  "no simple matching",

@@ -69,7 +69,7 @@ func (r *ring) buildRing(t reflect.Type, tag []string) {
 			}
 			node := &ring{
 				kind:  kind,
-				value: attrName,
+				value: strings.ToUpper(attrName),
 			}
 			node.buildRing(attrField.Type, tag)
 			r.children = append(r.children, node)
@@ -95,7 +95,7 @@ func findPrefixes(parts []string, pos int, value string) []possiblePrefix {
 	var result []possiblePrefix
 	for i := pos; i < len(parts); i++ {
 		matched, p := consumePart(parts, i, value)
-		if matched {
+		if matched && i > 0 {
 			result = append(result, possiblePrefix{
 				value:    strings.Join(parts[:i], "_"),
 				startPos: i,
