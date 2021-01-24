@@ -387,11 +387,10 @@ func TestUnmarshallEnv(t *testing.T) {
 				}
 			}{},
 			env: map[string]string{
-				"MAP_MY_KEY_MY_KEY":                     "lol",
-				"MAP_MY_MY_MY_KEY":                      "gg",
-				"MAP_MY_MY_INNER_NODE_0_MAP_INNER_NODE": "5",
-				"MAP_MY_MY_INNER_NODE_0_MAP_MY_KEY":     "6",
-				"MAP_MY_MY_MY_MY_KEY":                   "gg",
+				"MAP_MY_KEY_MY_KEY":                        "lol",
+				"MAP_MY_MY_MY_KEY":                         "gg",
+				"MAP_MY_MY_MY_INNER_NODE_0_MAP_INNER_NODE": "5",
+				"MAP_MY_MY_MY_MY_KEY":                      "gg",
 			},
 			result: &struct {
 				Map map[string]struct {
