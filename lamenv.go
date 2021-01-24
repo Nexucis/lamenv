@@ -253,6 +253,10 @@ func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
 		if err != nil {
 			return err
 		}
+		if len(prefix) == 0 {
+			// no prefix find, let's move to the next environment
+			continue
+		}
 		keyString := strings.ToLower(prefix)
 		value := reflect.Indirect(reflect.New(valueType))
 		if err := l.decode(value, append(parts, keyString)); err != nil {

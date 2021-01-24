@@ -375,7 +375,7 @@ func TestUnmarshallEnv(t *testing.T) {
 			},
 		},
 		{
-			title: "map of complex type",
+			title: "map of complex type 2",
 			config: &struct {
 				Map map[string]struct {
 					My struct {

@@ -130,6 +130,9 @@ func guessPrefix(parts []string, r *ring) (string, error) {
 			return strings.Join(parts, "_"), nil
 		} else {
 			prefixes := findPrefixes(parts, 0, r.value)
+			if len(prefixes) == 0 {
+				return "", nil
+			}
 			for _, prefix := range prefixes {
 				if prefix.startPos+1 == len(parts) {
 					return prefix.value, nil
