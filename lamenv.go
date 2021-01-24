@@ -1,3 +1,9 @@
+// Package lamenv is proposing a way to unmarshall the environment variable in a golang structure.
+//
+// Source code and other details for the project are available at GitHub:
+//
+//   https://github.com/Nexucis/lamenv
+//
 package lamenv
 
 import (
@@ -12,10 +18,40 @@ var defaultTagSupported = []string{
 	"yaml", "json", "mapstructure",
 }
 
+// Unmarshal is looking at the object to guess which environment variable is matching.
+//
+// Maps and pointers (to a struct, string, int, etc) are accepted as object.
+// If an internal pointer within a struct is not initialized,
+// the lamenv package will initialize it if necessary for unmarshalling the provided data.
+// The object parameter must not be nil.
+// The parts can be used to inject a prefix of the environment variable
+//
+// Struct fields are only unmarshalled if they are exported (have an
+// upper case first letter), and are unmarshalled using the field name
+// uppercased as the default key. Custom keys can be defined via the
+// "json", "yaml" and "mapstructure" name in the field tag.
+// If multiple tag name are defined, "json" is considered at first, then "yaml" and finally "mapstructure".
+//
+// Note: When using a map, it's possible for the Unmarshal method to fail because it's finding multiple way to unmarshal
+// the same environment variable for different field in the struct (that could be at different depth).
+// It's usually because when using a map, the method has to guess which key to use to unmarshal the environment variable.
+// And sometimes, it's possible there are severals keys found.
+//
+// Example of how to use it with the following environment variables available:
+//    MY_PREFIX_A = 1
+//    MY_PREFIX_B = 2
+//
+//    type T struct {
+//    	F int `json:"a,omitempty"`
+//    	B int
+//    }
+//    var t T
+//    lamenv.Unmarshal(&t, []string{"MY_PREFIX"})
 func Unmarshal(object interface{}, parts []string) error {
-	return New().Unmarshall(object, parts)
+	return New().Unmarshal(object, parts)
 }
 
+// Lamenv is the exported struct of the package that can be used to fine-tune the way to unmarshall the different struct.
 type Lamenv struct {
 	// TagSupports is a list of tag like "yaml", "json"
 	// that the code will look at it to know the name of the field
@@ -28,6 +64,8 @@ type Lamenv struct {
 	env map[string]bool
 }
 
+// New is the method to use to initialize the struct Lamenv.
+// The struct can then be fine tuned using the appropriate exported method.
 func New() *Lamenv {
 	env := make(map[string]bool)
 	for _, e := range os.Environ() {
@@ -45,8 +83,26 @@ func New() *Lamenv {
 	}
 }
 
-func (l *Lamenv) Unmarshall(object interface{}, parts []string) error {
+// Unmarshal reads the object to guess and find the appropriate environment variable to use for the decoding.
+// Once the environment variable matching the field looked is found, it will unmarshall the value and the set the field with it.
+func (l *Lamenv) Unmarshal(object interface{}, parts []string) error {
 	return l.decode(reflect.ValueOf(object), parts)
+}
+
+// AddTagSupport modify the current tag list supported by adding the one passed as a parameter.
+// If you prefer to override the default tag list supported by Lamenv, use the method OverrideTagSupport instead.
+func (l *Lamenv) AddTagSupport(tags ...string) *Lamenv {
+	for _, tag := range tags {
+		l.TagSupports = append(l.TagSupports, tag)
+	}
+	return l
+}
+
+// OverrideTagSupport overrides the current tag list supported by the one passed as a parameter.
+// If you prefer to add new tag supported instead of overriding the current list, use the method AddTagSupport instead.
+func (l *Lamenv) OverrideTagSupport(tags ...string) *Lamenv {
+	l.TagSupports = tags
+	return l
 }
 
 func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
