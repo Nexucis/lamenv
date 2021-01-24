@@ -243,12 +243,12 @@ func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
 	// 2. Pass the remaining parts to the parser that would return the prefix to be used.
 	for e := range l.env {
 		variable := buildEnvVariable(parts)
-		e := strings.TrimPrefix(e, variable)
-		if e == variable {
+		trimEnv := strings.TrimPrefix(e, variable+"_")
+		if trimEnv == e {
 			// TrimPrefix didn't remove anything, so that means, the environment variable doesn't start with the prefix parts
 			continue
 		}
-		futureParts := strings.Split(e, "_")
+		futureParts := strings.Split(trimEnv, "_")
 		prefix, err := guessPrefix(futureParts, parser)
 		if err != nil {
 			return err
