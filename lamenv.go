@@ -74,9 +74,9 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 			return err
 		}
 	default:
-		if input, ok := lookupEnv(parts); ok {
+		if variable, input, ok := lookupEnv(parts); ok {
 			// remove the variable to avoid to reuse it later
-			delete(l.env, input)
+			delete(l.env, variable)
 			return l.decodeNative(v, input)
 		}
 	}
@@ -314,8 +314,14 @@ func contains(parts []string) bool {
 	return false
 }
 
-func lookupEnv(parts []string) (string, bool) {
-	return os.LookupEnv(buildEnvVariable(parts))
+// lookupEnv is returning:
+// 1. the name of the environment variable
+// 2. the value of the environment variable
+// 3. if the environment variable exists
+func lookupEnv(parts []string) (string, string, bool) {
+	variable := buildEnvVariable(parts)
+	value, ok := os.LookupEnv(variable)
+	return variable, value, ok
 }
 
 func lookupTag(tag reflect.StructTag, tagSupports []string) (string, bool) {
