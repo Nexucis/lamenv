@@ -136,38 +136,38 @@ func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 
 func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 	for i := 0; i < v.NumField(); i++ {
-		attr := v.Field(i)
-		if !attr.CanSet() {
+		field := v.Field(i)
+		if !field.CanSet() {
 			// the field is not exported, so we won't be able to change its value.
 			continue
 		}
-		attrField := v.Type().Field(i)
-		attrName, ok := l.lookupTag(attrField.Tag)
+		fieldType := v.Type().Field(i)
+		fieldName, ok := l.lookupTag(fieldType.Tag)
 		if ok {
-			if attrName == "-" {
+			if fieldName == "-" {
 				continue
 			}
-			if attrName == ",squash" || attrName == ",inline" {
-				if err := l.decode(attr, parts); err != nil {
+			if fieldName == ",squash" || fieldName == ",inline" {
+				if err := l.decode(field, parts); err != nil {
 					return err
 				}
 				continue
 			}
-			if strings.Contains(attrName, "omitempty") {
+			if strings.Contains(fieldName, "omitempty") {
 				// Here we only have to check if there is one environment variable that is starting by the current parts
 				// It's not necessary accurate if you have one field that is a prefix of another field.
 				// But it's not really a big deal since it will just loop another time for nothing and could eventually initialize the field. But this case will not occur so often.
 				// To be more accurate, we would have to check the type of the field, because if it's a native type, then we will have to check if the parts are matching an environment variable.
 				// If it's a struct or an array or a map, then we will have to check if there is at least one variable starting by the parts + "_" (which would remove the possibility of having a field being a prefix of another one)
 				// So it's simpler like that. Let's see if I'm wrong or not.
-				if !contains(append(parts, attrName)) {
+				if !contains(append(parts, fieldName)) {
 					continue
 				}
 			}
 		} else {
-			attrName = attrField.Name
+			fieldName = fieldType.Name
 		}
-		if err := l.decode(attr, append(parts, attrName)); err != nil {
+		if err := l.decode(field, append(parts, fieldName)); err != nil {
 			return err
 		}
 	}
