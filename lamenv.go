@@ -1,4 +1,5 @@
-// Package lamenv is proposing a way to unmarshall the environment variable in a golang structure.
+// Package lamenv is proposing a way to support the environment variable for Golang
+// Using this package, you can encode or decode the environment variable with a proper Golang structure.
 //
 // Source code and other details for the project are available at GitHub:
 //
@@ -33,7 +34,7 @@ var defaultTagSupported = []string{
 // Note: When using a map, it's possible for the Unmarshal method to fail because it's finding multiple way to unmarshal
 // the same environment variable for different field in the struct (that could be at different depth).
 // It's usually because when using a map, the method has to guess which key to use to unmarshal the environment variable.
-// And sometimes, it's possible there are severals keys found.
+// And sometimes, it's possible there are several keys found.
 //
 // Example of how to use it with the following environment variables available:
 //    MY_PREFIX_A = 1
@@ -49,6 +50,35 @@ func Unmarshal(object interface{}, parts []string) error {
 	return New().Unmarshal(object, parts)
 }
 
+// Marshal serializes the value provided into a series of environment variable.
+// The series of environment variable generated will reflect the structure of the value itself
+// Maps and pointers (to struct, string, int, etc) are accepted as the object parameter.
+//
+// Struct fields are only marshalled if they are exported (have an upper case
+// first letter), and are marshalled using the field name uppercased as the
+// default key. Custom keys may be defined via the "json", "yaml" or "mapstructure" (by default) name in the field
+// tag: the content preceding the first comma is used as the key, and the
+// following comma-separated options are used to tweak the marshalling process.
+//
+//
+// The field tag format accepted is:
+//
+//     `(...) json|yaml|mapstructure:"[<key>][,<flag1>[,<flag2>]]" (...)`
+//
+// The following flags are currently supported:
+//
+//     omitempty              Only include the field if it's not set to the zero
+//                            value for the type or to empty slices or maps.
+//                            Zero valued structs will be omitted if all their public
+//                            fields are zero.
+//
+//     inline or squash       Inline the field, which must be a struct,
+//                            causing all of its fields or keys to be processed as if
+//                            they were part of the outer struct.
+//
+// In addition, if the key is "-", the field is ignored.
+//
+// parts is the list of prefix of the future environment variable. It can be empty.
 func Marshal(object interface{}, parts []string) error {
 	return New().Marshal(object, parts)
 }
