@@ -49,6 +49,10 @@ func Unmarshal(object interface{}, parts []string) error {
 	return New().Unmarshal(object, parts)
 }
 
+func Marshal(object interface{}, parts []string) error {
+	return New().Marshal(object, parts)
+}
+
 // Lamenv is the exported struct of the package that can be used to fine-tune the way to unmarshall the different struct.
 type Lamenv struct {
 	// TagSupports is a list of tag like "yaml", "json"
@@ -85,6 +89,10 @@ func New() *Lamenv {
 // Once the environment variable matching the field looked is found, it will unmarshall the value and the set the field with it.
 func (l *Lamenv) Unmarshal(object interface{}, parts []string) error {
 	return l.decode(reflect.ValueOf(object), parts)
+}
+
+func (l *Lamenv) Marshal(object interface{}, parts []string) error {
+	return l.encode(reflect.ValueOf(object), parts)
 }
 
 // AddTagSupport modify the current tag list supported by adding the one passed as a parameter.

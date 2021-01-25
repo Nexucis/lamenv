@@ -137,11 +137,11 @@ func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
-		if !field.CanSet() {
-			// the field is not exported, so we won't be able to change its value.
+		fieldType := v.Type().Field(i)
+		if len(fieldType.PkgPath) > 0 {
+			// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
 			continue
 		}
-		fieldType := v.Type().Field(i)
 		fieldName, ok := l.lookupTag(fieldType.Tag)
 		if ok {
 			if fieldName == "-" {

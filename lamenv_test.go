@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUnmarshallEnv(t *testing.T) {
+func TestUnmarshal(t *testing.T) {
 	testSuites := []struct {
 		title  string
 		parts  []string
@@ -454,6 +454,325 @@ func TestUnmarshallEnv(t *testing.T) {
 			assert.Equal(t, test.result, test.config)
 			// unset env
 			for k := range test.env {
+				_ = os.Unsetenv(k)
+			}
+		})
+	}
+}
+
+func TestMarshal(t *testing.T) {
+	testSuite := []struct {
+		title  string
+		conf   interface{}
+		parts  []string
+		result map[string]string
+	}{
+		{
+			title: "native type",
+			conf:  5,
+			parts: []string{"MY_PREFIX"},
+			result: map[string]string{
+				"MY_PREFIX": "5",
+			},
+		},
+		{
+			title: "simple config",
+			conf: &struct {
+				A     int
+				A1    int8
+				A2    int16
+				A3    int32
+				B     uint
+				B1    uint
+				B2    uint
+				B3    uint
+				C     bool
+				D     float64
+				Title string
+			}{
+				A:     78945613,
+				A1:    -1,
+				A2:    -123,
+				A3:    456789,
+				B:     78945613,
+				B1:    1,
+				B2:    123,
+				B3:    456789,
+				C:     true,
+				D:     1,
+				Title: "my title",
+			},
+			result: map[string]string{
+				"A":     "78945613",
+				"A1":    "-1",
+				"A2":    "-123",
+				"A3":    "456789",
+				"B":     "78945613",
+				"B1":    "1",
+				"B2":    "123",
+				"B3":    "456789",
+				"C":     "true",
+				"D":     "1.000000",
+				"TITLE": "my title",
+			},
+		},
+		{
+			title: "simple config with multiple tag support",
+			conf: &struct {
+				A     int
+				A1    int8  `json:"a_1"`
+				A2    int16 `yaml:"a_2"`
+				A3    int32 `mapstructure:"a_3"`
+				B     uint
+				B1    uint
+				B2    uint `json:"b_2" yaml:"b_2" mapstructure:"b_2"`
+				B3    uint
+				C     bool
+				D     float64
+				Title string
+			}{
+				A:     78945613,
+				A1:    -1,
+				A2:    -123,
+				A3:    456789,
+				B:     78945613,
+				B1:    1,
+				B2:    123,
+				B3:    456789,
+				C:     true,
+				D:     1,
+				Title: "my title",
+			},
+			result: map[string]string{
+				"A":     "78945613",
+				"A_1":   "-1",
+				"A_2":   "-123",
+				"A_3":   "456789",
+				"B":     "78945613",
+				"B1":    "1",
+				"B_2":   "123",
+				"B3":    "456789",
+				"C":     "true",
+				"D":     "1.000000",
+				"TITLE": "my title",
+			},
+		},
+		{
+			title: "inner struct",
+			parts: []string{"PREFIX"},
+			conf: &struct {
+				Aptr *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"a_ptr"`
+				A struct {
+					A struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}
+				}
+			}{
+				Aptr: &struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					InnerNode: 1,
+				},
+				A: struct {
+					A struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}
+				}{
+					A: struct {
+						A struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}
+					}{
+						A: struct {
+							SuperInnerNode int `mapstructure:"super_inner_node"`
+						}{
+							SuperInnerNode: 2,
+						},
+					},
+				},
+			},
+			result: map[string]string{
+				"PREFIX_A_PTR_INNER_NODE":       "1",
+				"PREFIX_A_A_A_SUPER_INNER_NODE": "2",
+			},
+		},
+		{
+			title: "slice with native type",
+			conf: &struct {
+				Slice []int
+			}{
+				Slice: []int{3, 2},
+			},
+			result: map[string]string{
+				"SLICE_0": "3",
+				"SLICE_1": "2",
+			},
+		},
+		{
+			title: "slice of struct",
+			conf: &struct {
+				Slice []struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+			}{
+				Slice: []struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					{
+						InnerNode: 5,
+					},
+					{
+						InnerNode: 1,
+					},
+				},
+			},
+			result: map[string]string{
+				"SLICE_0_INNER_NODE": "5",
+				"SLICE_1_INNER_NODE": "1",
+			},
+		},
+		{
+			title: "slice of pointer to struct",
+			conf: &struct {
+				Slice []*struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+			}{
+				Slice: []*struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					{
+						InnerNode: 5,
+					},
+					{
+						InnerNode: 1,
+					},
+				},
+			},
+			result: map[string]string{
+				"SLICE_0_INNER_NODE": "5",
+				"SLICE_1_INNER_NODE": "1",
+			},
+		},
+		{
+			title: "map of native type",
+			conf: &struct {
+				Map  map[string]int
+				Map2 map[string]float64
+			}{
+				Map: map[string]int{
+					"lol": 5,
+				},
+				Map2: map[string]float64{
+					"super_fun": 1,
+				},
+			},
+			result: map[string]string{
+				"MAP_LOL":        "5",
+				"MAP2_SUPER_FUN": "1.000000",
+			},
+		},
+		{
+			title: "map of complex type",
+			conf: &struct {
+				Map map[string]struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}
+				Map2 map[string][]int
+			}{
+				Map: map[string]struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					"lol": {InnerNode: 5},
+					"pgm": {InnerNode: 6},
+				},
+				Map2: map[string][]int{
+					"super_fun": {1, 2},
+					"fun":       {4, 5},
+				},
+			},
+			result: map[string]string{
+				"MAP_LOL_INNER_NODE": "5",
+				"MAP_PGM_INNER_NODE": "6",
+				"MAP2_SUPER_FUN_0":   "1",
+				"MAP2_SUPER_FUN_1":   "2",
+				"MAP2_FUN_0":         "4",
+				"MAP2_FUN_1":         "5",
+			},
+		},
+		{
+			title: "map of complex type 2",
+			conf: &struct {
+				Map map[string]struct {
+					My struct {
+						Key       string
+						InnerNode []struct {
+							Map map[string]string
+						} `mapstructure:"inner_node"`
+					}
+				}
+			}{
+				Map: map[string]struct {
+					My struct {
+						Key       string
+						InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+					}
+				}{
+					"my_key": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "lol",
+						},
+					},
+					"my_my": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "gg",
+							InnerNode: []struct{ Map map[string]string }{
+								{
+									Map: map[string]string{
+										"inner_node": "5",
+									},
+								},
+							},
+						},
+					},
+					"my_my_my": {
+						My: struct {
+							Key       string
+							InnerNode []struct{ Map map[string]string } `mapstructure:"inner_node"`
+						}{
+							Key: "gg",
+						},
+					},
+				},
+			},
+			result: map[string]string{
+				"MAP_MY_KEY_MY_KEY":                        "lol",
+				"MAP_MY_MY_MY_KEY":                         "gg",
+				"MAP_MY_MY_MY_INNER_NODE_0_MAP_INNER_NODE": "5",
+				"MAP_MY_MY_MY_MY_KEY":                      "gg",
+			},
+		},
+	}
+	for _, test := range testSuite {
+		t.Run(test.title, func(t *testing.T) {
+			err := Marshal(test.conf, test.parts)
+			assert.NoError(t, err)
+			for k, v := range test.result {
+				assert.Equal(t, v, os.Getenv(k))
+			}
+			for k := range test.result {
 				_ = os.Unsetenv(k)
 			}
 		})
