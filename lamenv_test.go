@@ -1,6 +1,7 @@
 package lamenv
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -510,6 +511,9 @@ func TestMarshal(t *testing.T) {
 		conf   interface{}
 		parts  []string
 		result map[string]string
+		// resultNotExist is a list of environment variable that shouldn't exist
+		// it's typically for testing the omitempty part
+		resultNotExist []string
 	}{
 		{
 			title: "native type",
@@ -808,6 +812,41 @@ func TestMarshal(t *testing.T) {
 				"MAP_MY_MY_MY_MY_KEY":                      "gg",
 			},
 		},
+		{
+			title: "omitempty management",
+			conf: &struct {
+				Slice []string `mapstructure:"slice,omitempty"`
+				Ptr1  *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_1,omitempty"`
+				Ptr2 *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_2,omitempty"`
+				Title string            `yaml:"title,omitempty"`
+				Map   map[string]string `json:"map,omitempty"`
+				A     uint              `json:"A,omitempty"`
+				B     int               `json:"B,omitempty"`
+				C     float64           `json:"C,omitempty"`
+			}{
+				Ptr2: &struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					InnerNode: 2,
+				},
+			},
+			result: map[string]string{
+				"PTR_2_INNER_NODE": "2",
+			},
+			resultNotExist: []string{
+				"SLICE",
+				"PTR_1_INNER_NODE",
+				"TITLE",
+				"MAP",
+				"A",
+				"B",
+				"C",
+			},
+		},
 	}
 	for _, test := range testSuite {
 		t.Run(test.title, func(t *testing.T) {
@@ -815,6 +854,10 @@ func TestMarshal(t *testing.T) {
 			assert.NoError(t, err)
 			for k, v := range test.result {
 				assert.Equal(t, v, os.Getenv(k))
+			}
+			for _, e := range test.resultNotExist {
+				_, ok := os.LookupEnv(e)
+				assert.False(t, ok, fmt.Sprintf("variable %s exists and it shouldn't", e))
 			}
 			for k := range test.result {
 				_ = os.Unsetenv(k)
