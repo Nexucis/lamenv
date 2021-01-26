@@ -214,7 +214,7 @@ func (l *Lamenv) decodeMap(v reflect.Value, parts []string) error {
 	// Like that we are able catch the key that would be in the middle of the prefix parts and the future parts
 
 	// Let's create first the struct that would represent what is behind the value of the map
-	parser := newRing(valueType, l.TagSupports)
+	parser := newRing(valueType, l.tagSupports)
 
 	// then foreach environment variable:
 	// 1. Remove the prefix parts

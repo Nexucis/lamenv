@@ -106,9 +106,9 @@ func Marshal(object interface{}, parts []string) error {
 
 // Lamenv is the exported struct of the package that can be used to fine-tune the way to unmarshall the different struct.
 type Lamenv struct {
-	// TagSupports is a list of tag like "yaml", "json"
+	// tagSupports is a list of tag like "yaml", "json"
 	// that the code will look at it to know the name of the field
-	TagSupports []string
+	tagSupports []string
 	// env is the map that is representing the list of the environment variable visited
 	// The key is the name of the variable.
 	// The value is not important, since once the variable would be used, then the key will be removed
@@ -129,7 +129,7 @@ func New() *Lamenv {
 		env[envSplit[0]] = true
 	}
 	return &Lamenv{
-		TagSupports: []string{
+		tagSupports: []string{
 			"yaml", "json", "mapstructure",
 		},
 		env: env,
@@ -150,7 +150,7 @@ func (l *Lamenv) Marshal(object interface{}, parts []string) error {
 // If you prefer to override the default tag list supported by Lamenv, use the method OverrideTagSupport instead.
 func (l *Lamenv) AddTagSupport(tags ...string) *Lamenv {
 	for _, tag := range tags {
-		l.TagSupports = append(l.TagSupports, tag)
+		l.tagSupports = append(l.tagSupports, tag)
 	}
 	return l
 }
@@ -158,12 +158,12 @@ func (l *Lamenv) AddTagSupport(tags ...string) *Lamenv {
 // OverrideTagSupport overrides the current tag list supported by the one passed as a parameter.
 // If you prefer to add new tag supported instead of overriding the current list, use the method AddTagSupport instead.
 func (l *Lamenv) OverrideTagSupport(tags ...string) *Lamenv {
-	l.TagSupports = tags
+	l.tagSupports = tags
 	return l
 }
 
 func (l *Lamenv) lookupTag(tag reflect.StructTag) ([]string, bool) {
-	return lookupTag(tag, l.TagSupports)
+	return lookupTag(tag, l.tagSupports)
 }
 
 func contains(parts []string) bool {
