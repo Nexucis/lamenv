@@ -950,3 +950,15 @@ func TestMarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestLamenv_AddTagSupport(t *testing.T) {
+	lam := New()
+	lam.AddTagSupport("env")
+	assert.Equal(t, append(defaultTagSupported, "env"), lam.tagSupports)
+}
+
+func TestLamenv_OverrideTagSupport(t *testing.T) {
+	lam := New()
+	lam.OverrideTagSupport("env")
+	assert.Equal(t, []string{"env"}, lam.tagSupports)
+}
