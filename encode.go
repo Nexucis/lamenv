@@ -144,8 +144,8 @@ func isZero(v reflect.Value) bool {
 		return !v.Bool()
 	case reflect.Struct:
 		vt := v.Type()
-		for i := v.NumField() - 1; i >= 0; i-- {
-			if vt.Field(i).PkgPath != "" {
+		for i := 0; i < v.NumField(); i++ {
+			if len(vt.Field(i).PkgPath) > 0 {
 				continue // Private field
 			}
 			if !isZero(v.Field(i)) {

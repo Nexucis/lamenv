@@ -46,7 +46,7 @@ func (r *ring) buildRing(t reflect.Type, tag []string) {
 		r.buildRing(t.Elem(), tag)
 	case reflect.Struct:
 		for i := 0; i < t.NumField(); i++ {
-			if len(t.Field(i).PkgPath) != 0 {
+			if len(t.Field(i).PkgPath) > 0 {
 				// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
 				continue
 			}

@@ -487,6 +487,48 @@ func TestUnmarshal(t *testing.T) {
 				},
 			},
 		},
+		{
+			title: "squash",
+			config: &struct {
+				S struct {
+					A int
+					B uint
+				} `mapstructure:",inline"`
+				S2 struct {
+					C float64 `mapstructure:"c,omitempty"`
+					D string
+				} `mapstructure:",squash"`
+			}{},
+			env: map[string]string{
+				"A": "0",
+				"B": "0",
+				"D": "awesome string",
+			},
+			result: &struct {
+				S struct {
+					A int
+					B uint
+				} `mapstructure:",inline"`
+				S2 struct {
+					C float64 `mapstructure:"c,omitempty"`
+					D string
+				} `mapstructure:",squash"`
+			}{
+				S: struct {
+					A int
+					B uint
+				}{
+					A: 0,
+					B: 0,
+				},
+				S2: struct {
+					C float64 `mapstructure:"c,omitempty"`
+					D string
+				}{
+					D: "awesome string",
+				},
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
@@ -844,6 +886,41 @@ func TestMarshal(t *testing.T) {
 				"MAP",
 				"A",
 				"B",
+				"C",
+			},
+		},
+		{
+			title: "squash",
+			conf: &struct {
+				S struct {
+					A int
+					B uint
+				} `mapstructure:",inline"`
+				S2 struct {
+					C float64 `mapstructure:"c,omitempty"`
+					D string
+				} `mapstructure:",squash"`
+			}{
+				S: struct {
+					A int
+					B uint
+				}{
+					A: 0,
+					B: 0,
+				},
+				S2: struct {
+					C float64 `mapstructure:"c,omitempty"`
+					D string
+				}{
+					D: "awesome string",
+				},
+			},
+			result: map[string]string{
+				"A": "0",
+				"B": "0",
+				"D": "awesome string",
+			},
+			resultNotExist: []string{
 				"C",
 			},
 		},
