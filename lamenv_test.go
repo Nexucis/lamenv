@@ -869,6 +869,11 @@ func TestMarshal(t *testing.T) {
 				A     uint              `json:"A,omitempty"`
 				B     int               `json:"B,omitempty"`
 				C     float64           `json:"C,omitempty"`
+				D     struct {
+					b uint
+					A int `json:"A,omitempty"`
+				} `json:"D,omitempty"`
+				E bool `json:"e,omitempty"`
 			}{
 				Ptr2: &struct {
 					InnerNode int `mapstructure:"inner_node"`
@@ -887,6 +892,9 @@ func TestMarshal(t *testing.T) {
 				"A",
 				"B",
 				"C",
+				"D_A",
+				"D_b",
+				"E",
 			},
 		},
 		{
