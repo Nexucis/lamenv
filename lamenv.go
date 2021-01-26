@@ -17,6 +17,16 @@ var defaultTagSupported = []string{
 	"yaml", "json", "mapstructure",
 }
 
+// The Unmarshaler interface may be implemented by types to customize their
+// behavior when being unmarshaled from a series of environment varialb.
+//
+// parts is the list of prefix that would composed the final environment variables.
+// Note: for the moment, customize the way to decode a type may not work when using a map.
+// The main reason is because the system is then not able to determinate which key it has to use when unmarshalling a map.
+type Unmarshaler interface {
+	UnmarshalEnv(parts []string) error
+}
+
 // The Marshaler interface may be implemented by types to customize their
 // behavior when being marshaled into a series of environment variable document.
 //

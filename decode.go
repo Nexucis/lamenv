@@ -9,13 +9,24 @@ import (
 
 func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 	v := conf
+	// ptr will be used to try if the value is implementing the interface Unmarshaler.
+	// if it's the case then, the implementation of the interface has the priority.
+	ptr := conf
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			// if the pointer is not initialized, then accessing to its element will return `reflect.invalid`
 			// So we have to create a new instance of the pointer first
 			v.Set(reflect.New(v.Type().Elem()))
+			ptr = v
 		}
 		v = v.Elem()
+	} else {
+		ptr = reflect.New(v.Type())
+		ptr.Elem().Set(v)
+	}
+
+	if p, ok := ptr.Interface().(Unmarshaler); ok {
+		return p.UnmarshalEnv(parts)
 	}
 
 	switch v.Kind() {
