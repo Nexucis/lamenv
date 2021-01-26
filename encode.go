@@ -10,11 +10,21 @@ import (
 
 func (l *Lamenv) encode(value reflect.Value, parts []string) error {
 	v := value
+	// ptr will be used to try if the value is implementing the interface Marshaler.
+	// if it's the case then, the implementation of the interface has the priority.
+	ptr := value
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return nil
 		}
 		v = v.Elem()
+	} else {
+		ptr = reflect.New(v.Type())
+		ptr.Elem().Set(v)
+	}
+
+	if p, ok := ptr.Interface().(Marshaler); ok {
+		return p.MarshalEnv(parts)
 	}
 
 	switch v.Kind() {

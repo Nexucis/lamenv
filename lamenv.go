@@ -17,6 +17,17 @@ var defaultTagSupported = []string{
 	"yaml", "json", "mapstructure",
 }
 
+// The Marshaler interface may be implemented by types to customize their
+// behavior when being marshaled into a series of environment variable document.
+//
+// parts is the list of prefix that would composed the final environment variables.
+//
+// If an error is returned by MarshalEnv, the marshaling procedure stops
+// and returns with the provided error.
+type Marshaler interface {
+	MarshalEnv(parts []string) error
+}
+
 // Unmarshal is looking at the object to guess which environment variable is matching.
 //
 // Maps and pointers (to a struct, string, int, etc) are accepted as object.
