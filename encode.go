@@ -5,7 +5,6 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 func (l *Lamenv) encode(value reflect.Value, parts []string) error {
@@ -85,18 +84,21 @@ func (l *Lamenv) encodeStruct(value reflect.Value, parts []string) error {
 			// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
 			continue
 		}
-		fieldName, ok := l.lookupTag(fieldType.Tag)
+		var fieldName string
+		tags, ok := l.lookupTag(fieldType.Tag)
 		if ok {
+			fieldName = tags[0]
+			tags = tags[1:]
 			if fieldName == "-" {
 				continue
 			}
-			if fieldName == ",squash" || fieldName == ",inline" {
+			if containStr(tags, squash) || containStr(tags, inline) {
 				if err := l.encode(field, parts); err != nil {
 					return err
 				}
 				continue
 			}
-			if strings.Contains(fieldName, "omitempty") && isZero(field) {
+			if containStr(tags, omitempty) && isZero(field) {
 				continue
 			}
 		} else {

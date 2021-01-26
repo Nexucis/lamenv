@@ -248,6 +248,50 @@ func TestUnmarshal(t *testing.T) {
 			},
 		},
 		{
+			title: "omitempty management for pointer 2",
+			config: &struct {
+				Ptr1 *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_1,omitempty"`
+			}{},
+			env: map[string]string{
+				"PTR_1_INNER_NODE": "3",
+			},
+			result: &struct {
+				Ptr1 *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_1,omitempty"`
+			}{
+				Ptr1: &struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					InnerNode: 3,
+				},
+			},
+		},
+		{
+			title: "omitempty management for pointer 3",
+			config: &struct {
+				Ptr1 *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_1,  omitempty"` // so much space here, but it shouldn't cause an issue
+			}{},
+			env: map[string]string{
+				"PTR_1_INNER_NODE": "3",
+			},
+			result: &struct {
+				Ptr1 *struct {
+					InnerNode int `mapstructure:"inner_node"`
+				} `mapstructure:"ptr_1,  omitempty"`
+			}{
+				Ptr1: &struct {
+					InnerNode int `mapstructure:"inner_node"`
+				}{
+					InnerNode: 3,
+				},
+			},
+		},
+		{
 			title: "slice with native type",
 			config: &struct {
 				Slice []int

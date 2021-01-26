@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+const (
+	omitempty = "omitempty"
+	squash    = "squash"
+	inline    = "inline"
+)
+
 func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 	v := conf
 	// ptr will be used to try if the value is implementing the interface Unmarshaler.
@@ -153,18 +159,21 @@ func (l *Lamenv) decodeStruct(v reflect.Value, parts []string) error {
 			// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
 			continue
 		}
-		fieldName, ok := l.lookupTag(fieldType.Tag)
+		var fieldName string
+		tags, ok := l.lookupTag(fieldType.Tag)
 		if ok {
+			fieldName = tags[0]
+			tags = tags[1:]
 			if fieldName == "-" {
 				continue
 			}
-			if fieldName == ",squash" || fieldName == ",inline" {
+			if containStr(tags, squash) || containStr(tags, inline) {
 				if err := l.decode(field, parts); err != nil {
 					return err
 				}
 				continue
 			}
-			if strings.Contains(fieldName, "omitempty") {
+			if containStr(tags, omitempty) {
 				// Here we only have to check if there is one environment variable that is starting by the current parts
 				// It's not necessary accurate if you have one field that is a prefix of another field.
 				// But it's not really a big deal since it will just loop another time for nothing and could eventually initialize the field. But this case will not occur so often.

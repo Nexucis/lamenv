@@ -50,26 +50,29 @@ func (r *ring) buildRing(t reflect.Type, tag []string) {
 				// the field is not exported, so no need to look at it as we won't be able to set it in a later stage
 				continue
 			}
-			attrField := t.Field(i)
-			attrName, ok := lookupTag(attrField.Tag, tag)
+			field := t.Field(i)
+			var fieldName string
+			tags, ok := lookupTag(field.Tag, tag)
 			kind := node
 			if ok {
-				if attrName == "-" {
+				fieldName = tags[0]
+				tags = tags[1:]
+				if fieldName == "-" {
 					continue
 				}
-				if attrName == ",squash" || attrName == ",inline" {
+				if containStr(tags, squash) || containStr(tags, inline) {
 					// in this case it just means the next node won't provide any additional value
-					attrName = ""
+					fieldName = ""
 					kind = nodeSquashed
 				}
 			} else {
-				attrName = attrField.Name
+				fieldName = field.Name
 			}
 			node := &ring{
 				kind:  kind,
-				value: strings.ToUpper(attrName),
+				value: strings.ToUpper(fieldName),
 			}
-			node.buildRing(attrField.Type, tag)
+			node.buildRing(field.Type, tag)
 			r.children = append(r.children, node)
 		}
 	case reflect.Map,

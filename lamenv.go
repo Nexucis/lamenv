@@ -162,7 +162,7 @@ func (l *Lamenv) OverrideTagSupport(tags ...string) *Lamenv {
 	return l
 }
 
-func (l *Lamenv) lookupTag(tag reflect.StructTag) (string, bool) {
+func (l *Lamenv) lookupTag(tag reflect.StructTag) ([]string, bool) {
 	return lookupTag(tag, l.TagSupports)
 }
 
@@ -190,13 +190,13 @@ func lookupEnv(parts []string) (string, string, bool) {
 	return variable, value, ok
 }
 
-func lookupTag(tag reflect.StructTag, tagSupports []string) (string, bool) {
+func lookupTag(tag reflect.StructTag, tagSupports []string) ([]string, bool) {
 	for _, tagSupport := range tagSupports {
 		if s, ok := tag.Lookup(tagSupport); ok {
-			return s, ok
+			return strings.Split(s, ","), ok
 		}
 	}
-	return "", false
+	return nil, false
 }
 
 func buildEnvVariable(parts []string) string {
@@ -205,4 +205,14 @@ func buildEnvVariable(parts []string) string {
 		newParts[i] = strings.ToUpper(s)
 	}
 	return strings.Join(newParts, "_")
+}
+
+// containStr returns true if s is one element of series
+func containStr(series []string, s string) bool {
+	for _, str := range series {
+		if str == s {
+			return true
+		}
+	}
+	return false
 }
