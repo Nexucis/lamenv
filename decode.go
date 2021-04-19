@@ -32,7 +32,12 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 	}
 
 	if p, ok := ptr.Interface().(Unmarshaler); ok {
-		return p.UnmarshalEnv(parts)
+		if err := p.UnmarshalEnv(parts); err != nil {
+			return err
+		}
+		// in case the method UnmarshalEnv() is setting some parameter in the struct, we have to save these changes
+		v.Set(ptr.Elem())
+		return nil
 	}
 
 	switch v.Kind() {
