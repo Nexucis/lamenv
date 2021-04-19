@@ -149,9 +149,7 @@ func (l *Lamenv) Marshal(object interface{}, parts []string) error {
 // AddTagSupport modify the current tag list supported by adding the one passed as a parameter.
 // If you prefer to override the default tag list supported by Lamenv, use the method OverrideTagSupport instead.
 func (l *Lamenv) AddTagSupport(tags ...string) *Lamenv {
-	for _, tag := range tags {
-		l.tagSupports = append(l.tagSupports, tag)
-	}
+	l.tagSupports = append(l.tagSupports, tags...)
 	return l
 }
 
