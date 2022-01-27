@@ -167,7 +167,7 @@ func (l *Lamenv) lookupTag(tag reflect.StructTag) ([]string, bool) {
 func contains(parts []string) bool {
 	variable := buildEnvVariable(parts)
 	for _, e := range os.Environ() {
-		envSplit := strings.Split(e, "=")
+		envSplit := strings.SplitN(e, "=", 2)
 		if len(envSplit) != 2 {
 			continue
 		}
