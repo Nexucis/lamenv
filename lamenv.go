@@ -122,7 +122,7 @@ type Lamenv struct {
 func New() *Lamenv {
 	env := make(map[string]bool)
 	for _, e := range os.Environ() {
-		envSplit := strings.Split(e, "=")
+		envSplit := strings.SplitN(e, "=", 2)
 		if len(envSplit) != 2 {
 			continue
 		}
