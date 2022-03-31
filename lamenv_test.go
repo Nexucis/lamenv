@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	duration3h    = 3 * time.Hour
+	durationEmpty = time.Duration(0)
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -529,6 +535,36 @@ func TestUnmarshal(t *testing.T) {
 				},
 			},
 		},
+		{
+			title: "time.Duration",
+			config: &struct {
+				A time.Duration
+				B *time.Duration
+				C time.Duration
+				D *time.Duration
+				E time.Duration  `mapstructure:"e,omitempty"`
+				F *time.Duration `mapstructure:"f,omitempty"`
+			}{},
+			env: map[string]string{
+				"A": "60s",
+				"B": "3h",
+			},
+			result: &struct {
+				A time.Duration
+				B *time.Duration
+				C time.Duration
+				D *time.Duration
+				E time.Duration  `mapstructure:"e,omitempty"`
+				F *time.Duration `mapstructure:"f,omitempty"`
+			}{
+				A: 1 * time.Minute,
+				B: &duration3h,
+				C: durationEmpty,
+				D: &durationEmpty,
+				E: durationEmpty,
+				F: &durationEmpty,
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
@@ -930,6 +966,37 @@ func TestMarshal(t *testing.T) {
 			},
 			resultNotExist: []string{
 				"C",
+			},
+		},
+		{
+			title: "time.Duration",
+			conf: &struct {
+				A time.Duration
+				B *time.Duration
+				C time.Duration
+				D *time.Duration
+				E time.Duration  `mapstructure:"e,omitempty"`
+				F *time.Duration `mapstructure:"f,omitempty"`
+				G *time.Duration `mapstructure:"g,omitempty"`
+			}{
+				A: 1 * time.Minute,
+				B: &duration3h,
+				C: durationEmpty,
+				D: &durationEmpty,
+				E: durationEmpty,
+				F: &durationEmpty,
+				G: nil,
+			},
+			result: map[string]string{
+				"A": "1m0s",
+				"B": "3h0m0s",
+				"C": "0s",
+				"D": "0s",
+				"F": "0s", // a zero value in a pointer is considered as an explicit set so not omitted
+			},
+			resultNotExist: []string{
+				"E",
+				"G",
 			},
 		},
 	}
