@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -12,6 +13,8 @@ const (
 	squash    = "squash"
 	inline    = "inline"
 )
+
+var durationType = reflect.TypeOf(time.Duration(0))
 
 func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 	v := conf
@@ -110,11 +113,20 @@ func (l *Lamenv) decodeBool(v reflect.Value, input string) error {
 }
 
 func (l *Lamenv) decodeInt(v reflect.Value, input string) error {
-	i, err := strconv.ParseInt(strings.TrimSpace(input), 10, 0)
-	if err != nil {
-		return err
+	if v.Type() == durationType {
+		i, err := time.ParseDuration(strings.TrimSpace(input))
+		if err != nil {
+			return err
+		}
+		v.SetInt(int64(i))
+	} else {
+		i, err := strconv.ParseInt(strings.TrimSpace(input), 10, 0)
+		if err != nil {
+			return err
+		}
+		v.SetInt(i)
 	}
-	v.SetInt(i)
+
 	return nil
 }
 

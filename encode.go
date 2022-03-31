@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 func (l *Lamenv) encode(value reflect.Value, parts []string) error {
@@ -168,6 +169,9 @@ func nativeToString(value reflect.Value) string {
 		reflect.Int16,
 		reflect.Int32,
 		reflect.Int64:
+		if value.Type() == durationType {
+			return value.Interface().(time.Duration).String()
+		}
 		return fmt.Sprintf("%d", value.Int())
 	case reflect.Uint,
 		reflect.Uint8,
