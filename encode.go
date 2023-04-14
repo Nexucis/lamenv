@@ -1,6 +1,7 @@
 package lamenv
 
 import (
+	"encoding"
 	"fmt"
 	"os"
 	"reflect"
@@ -25,6 +26,14 @@ func (l *Lamenv) encode(value reflect.Value, parts []string) error {
 
 	if p, ok := ptr.Interface().(Marshaler); ok {
 		return p.MarshalEnv(parts)
+	}
+
+	if p, ok := ptr.Interface().(encoding.TextMarshaler); ok {
+		raw, err := p.MarshalText()
+		if err != nil {
+			return err
+		}
+		return os.Setenv(buildEnvVariable(parts), string(raw))
 	}
 
 	switch v.Kind() {
