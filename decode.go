@@ -155,7 +155,7 @@ func (l *Lamenv) decodeUInt(v reflect.Value, input string) error {
 }
 
 func (l *Lamenv) decodeFloat(v reflect.Value, input string) error {
-	i, err := strconv.ParseFloat(strings.TrimSpace(input), 10)
+	i, err := strconv.ParseFloat(strings.TrimSpace(input), 64)
 	if err != nil {
 		return err
 	}
