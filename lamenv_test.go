@@ -3,6 +3,7 @@ package lamenv
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,20 @@ var (
 	duration3h    = 3 * time.Hour
 	durationEmpty = time.Duration(0)
 )
+
+// This type is a dummy alias of string which proves that encoding.TextUnmarshaler and encoding.TextMarshaler can be
+// implemented for custom encoding/decoding.
+// It replaces "foo" with "bar" when unmarshalling and "bar" with "foo" when marshalling.
+type dummyString string
+
+func (s *dummyString) UnmarshalText(text []byte) error {
+	*s = dummyString(strings.Replace(string(text), "foo", "bar", -1))
+	return nil
+}
+
+func (s *dummyString) MarshalText() ([]byte, error) {
+	return []byte(strings.Replace(string(*s), "bar", "foo", -1)), nil
+}
 
 func TestUnmarshal(t *testing.T) {
 	testSuites := []struct {
@@ -565,6 +580,20 @@ func TestUnmarshal(t *testing.T) {
 				F: &durationEmpty,
 			},
 		},
+		{
+			title: "encoding.TextUnmarshaler",
+			config: &struct {
+				A dummyString
+			}{},
+			env: map[string]string{
+				"A": "foofoofoo",
+			},
+			result: &struct {
+				A dummyString
+			}{
+				A: "barbarbar",
+			},
+		},
 	}
 	for _, test := range testSuites {
 		t.Run(test.title, func(t *testing.T) {
@@ -997,6 +1026,17 @@ func TestMarshal(t *testing.T) {
 			resultNotExist: []string{
 				"E",
 				"G",
+			},
+		},
+		{
+			title: "encoding.TextMarshaler",
+			conf: &struct {
+				A dummyString
+			}{
+				A: "barbarbar",
+			},
+			result: map[string]string{
+				"A": "foofoofoo",
 			},
 		},
 	}

@@ -1,6 +1,7 @@
 package lamenv
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -43,6 +44,20 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 		return nil
 	}
 
+	if p, ok := ptr.Interface().(encoding.TextUnmarshaler); ok {
+		if variable, input, exist := lookupEnv(parts); exist {
+			// remove the variable to avoid to reuse it later
+			delete(l.env, variable)
+			if err := p.UnmarshalText([]byte(input)); err != nil {
+				return err
+			}
+
+			// in case the method UnmarshalEnv() is setting some parameter in the struct, we have to save these changes
+			v.Set(ptr.Elem())
+			return nil
+		}
+	}
+
 	switch v.Kind() {
 	case reflect.Map:
 		if err := l.decodeMap(v, parts); err != nil {
@@ -57,7 +72,7 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 			return err
 		}
 	default:
-		if variable, input, ok := lookupEnv(parts); ok {
+		if variable, input, exist := lookupEnv(parts); exist {
 			// remove the variable to avoid to reuse it later
 			delete(l.env, variable)
 			return l.decodeNative(v, input)
@@ -149,7 +164,9 @@ func (l *Lamenv) decodeFloat(v reflect.Value, input string) error {
 }
 
 // decodeSlice will support ony one syntax which is:
-//        <PREFIX>_<SLICE_INDEX>(_<SUFFIX>)?
+//
+//	<PREFIX>_<SLICE_INDEX>(_<SUFFIX>)?
+//
 // This syntax is the only one that is able to manage smoothly every existing type in Golang and it is a determinist syntax.
 func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 	sliceType := v.Type().Elem()
