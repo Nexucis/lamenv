@@ -46,7 +46,7 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 
 	if p, ok := ptr.Interface().(encoding.TextUnmarshaler); ok {
 		if variable, input, exist := lookupEnv(parts); exist {
-			// remove the variable to avoid to reuse it later
+			// remove the variable to avoid reusing it later
 			delete(l.env, variable)
 			if err := p.UnmarshalText([]byte(input)); err != nil {
 				return err
@@ -54,8 +54,8 @@ func (l *Lamenv) decode(conf reflect.Value, parts []string) error {
 
 			// in case the method UnmarshalEnv() is setting some parameter in the struct, we have to save these changes
 			v.Set(ptr.Elem())
-			return nil
 		}
+		return nil
 	}
 
 	switch v.Kind() {
