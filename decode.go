@@ -174,12 +174,22 @@ func (l *Lamenv) decodeSlice(v reflect.Value, parts []string) error {
 	// then it will create a new item in a slice and will use the next recursive loop to set it.
 	i := 0
 	for ok := contains(append(parts, strconv.Itoa(i))); ok; ok = contains(append(parts, strconv.Itoa(i))) {
-		// create a new item and pass it to the method decode to be able to "decode" its value
-		tmp := reflect.Indirect(reflect.New(sliceType))
-		if err := l.decode(tmp, append(parts, strconv.Itoa(i))); err != nil {
+		var sliceElem reflect.Value
+		if i < v.Len() {
+			// that means there is already an element in the slice and should just complete or override the value
+			sliceElem = v.Index(i)
+		} else {
+			// in that case we have to create a new element
+			sliceElem = reflect.Indirect(reflect.New(sliceType))
+		}
+		if err := l.decode(sliceElem, append(parts, strconv.Itoa(i))); err != nil {
 			return err
 		}
-		v.Set(reflect.Append(v, tmp))
+
+		if i >= v.Len() {
+			// in case we have created a new element, then we need to add it to the slice
+			v.Set(reflect.Append(v, sliceElem))
+		}
 		i++
 	}
 	return nil

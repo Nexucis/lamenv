@@ -1,6 +1,7 @@
 package lamenv
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -27,6 +28,81 @@ func (s *dummyString) UnmarshalText(text []byte) error {
 
 func (s *dummyString) MarshalText() ([]byte, error) {
 	return []byte(strings.Replace(string(*s), "bar", "foo", -1)), nil
+}
+
+func TestUnmarshalWithOverriding(t *testing.T) {
+	type InlineStruct struct {
+		A string `json:"a"`
+		B string `json:"b"`
+	}
+	type complexStruct struct {
+		InlineStruct `json:",inline"`
+		C            string `json:"c"`
+	}
+	type finalStruct struct {
+		Slice []*complexStruct `json:"slice"`
+		D     string           `json:"d"`
+		F     string           `json:"f"`
+	}
+
+	testSuite := []struct {
+		title  string
+		jason  string
+		env    map[string]string
+		result finalStruct
+	}{
+		{
+			title: "",
+			jason: `
+{
+  "d": "not empty",
+  "slice": [
+    {
+      "a": "not empty"
+    }
+  ]
+}
+`,
+			env: map[string]string{
+				"SLICE_0_B": "from env",
+				"SLICE_1_A": "from env",
+			},
+			result: finalStruct{
+				Slice: []*complexStruct{
+					{
+						InlineStruct: InlineStruct{
+							A: "not empty",
+							B: "from env",
+						},
+						C: "",
+					},
+					{
+						InlineStruct: InlineStruct{
+							A: "from env",
+						},
+					},
+				},
+				D: "not empty",
+				F: "",
+			},
+		},
+	}
+
+	for _, test := range testSuite {
+		t.Run(test.title, func(t *testing.T) {
+			for k, v := range test.env {
+				_ = os.Setenv(k, v)
+			}
+			c := &finalStruct{}
+			assert.NoError(t, json.Unmarshal([]byte(test.jason), c))
+			assert.NoError(t, Unmarshal(c, []string{}))
+			assert.Equal(t, test.result, *c)
+			for k := range test.env {
+				_ = os.Unsetenv(k)
+			}
+		})
+	}
+
 }
 
 func TestUnmarshal(t *testing.T) {
